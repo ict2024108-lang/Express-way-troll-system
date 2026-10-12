@@ -299,6 +299,14 @@ See the `LICENSE` file for more information.
 
 ---
 
+# Login
+
+| Username   | Password     | Role     |
+|------------|--------------|----------|
+| admin      | admin123     | Admin    |
+| operator1  | operator123  | Operator |
+
+
 ## 👨‍💻 Project
 
 **Expressway Toll System CLI**
