@@ -1,0 +1,267 @@
+﻿#pragma once
+#include "StationsForm.h"
+#include "VehiclesForm.h"
+#include "RatesForm.h"
+#include "TransactionsForm.h"
+#include "PaymentsForm.h"
+
+using namespace System;
+using namespace System::Drawing;
+using namespace System::Drawing::Drawing2D;
+using namespace System::Windows::Forms;
+
+namespace ExpresswayToll {
+
+    // ---- clickable dashboard tile
+    public ref class MenuCard : public Control {
+        String^ title;
+        String^ desc;
+        Color accent;
+        bool hover;
+
+    public:
+        int Kind;
+
+        MenuCard(int kind, String^ t, String^ d, Color accentColor) {
+            Kind = kind;
+            title = t;
+            desc = d;
+            accent = accentColor;
+            hover = false;
+            DoubleBuffered = true;
+            SetStyle(ControlStyles::SupportsTransparentBackColor, true);
+            BackColor = Color::Transparent;
+            Cursor = Cursors::Hand;
+            Dock = DockStyle::Fill;
+            Margin = System::Windows::Forms::Padding(8);
+        }
+
+    protected:
+        virtual void OnMouseEnter(EventArgs^ e) override { hover = true; Invalidate(); Control::OnMouseEnter(e); }
+        virtual void OnMouseLeave(EventArgs^ e) override { hover = false; Invalidate(); Control::OnMouseLeave(e); }
+
+        virtual void OnPaint(PaintEventArgs^ e) override {
+            Graphics^ g = e->Graphics;
+            Theme::Smooth(g);
+            float w = (float)Width, h = (float)Height;
+            float lift = hover ? 3.0f : 0.0f;
+            Theme::FillRound(g, gcnew SolidBrush(Color::FromArgb(hover ? 40 : 20, 0, 0, 0)), 3, 7 - lift, w - 7, h - 10, 18);
+            Theme::FillRound(g, Brushes::White, 0, 3 - lift, w - 4, h - 10, 18);
+            Theme::DrawRound(g, gcnew Pen(hover ? accent : Theme::Line(), hover ? 2.0f : 1.0f), 0, 3 - lift, w - 5, h - 11, 18);
+
+            g->TranslateTransform(0, -lift);
+            // icon badge
+            Theme::FillRound(g, gcnew SolidBrush(Color::FromArgb(28, accent)), 22, 24, 54, 54, 16);
+            Pen^ pen = gcnew Pen(accent, 2.4f);
+            pen->StartCap = LineCap::Round;
+            pen->EndCap = LineCap::Round;
+            pen->LineJoin = LineJoin::Round;
+            DrawIcon(g, pen, Kind, 34, 36, 30);
+
+            // number
+            System::Drawing::Font^ nf = Theme::Fnt(FontStyle::Bold, 9.0f);
+            String^ n = "0" + Kind.ToString();
+            SizeF ns = g->MeasureString(n, nf);
+            g->DrawString(n, nf, gcnew SolidBrush(Color::FromArgb(0xB4, 0xC0, 0xBC)), w - 24 - ns.Width, 22.0f);
+
+            g->DrawString(title, Theme::Fnt(FontStyle::Bold, 13.5f), gcnew SolidBrush(Theme::Navy()), 20.0f, 90.0f);
+            g->DrawString(desc, Theme::Fnt(FontStyle::Regular, 9.5f), gcnew SolidBrush(Theme::Muted()),
+                RectangleF(22.0f, 120.0f, w - 44, 40.0f));
+            g->DrawString("Open  →", Theme::Fnt(FontStyle::Bold, 9.0f), gcnew SolidBrush(accent), 22.0f, h - 40.0f);
+            g->ResetTransform();
+        }
+
+    private:
+        static void DrawIcon(Graphics^ g, Pen^ p, int kind, int x, int y, int s) {
+            SolidBrush^ fill = gcnew SolidBrush(p->Color);
+            switch (kind) {
+            case 1:  // toll gantry
+                g->DrawLine(p, x + 2, y + s, x + 2, y + 6);
+                g->DrawLine(p, x + s - 2, y + s, x + s - 2, y + 6);
+                Theme::DrawRound(g, p, (float)x, (float)y + 2, (float)s, 8, 4);
+                g->DrawRectangle(p, x + 8, y + 14, s - 16, 7);
+                break;
+            case 2: {  // car
+                array<Point>^ pts = gcnew array<Point>{ Point(x, y + 21), Point(x + 3, y + 12), Point(x + 9, y + 6),
+                    Point(x + s - 9, y + 6), Point(x + s - 3, y + 12), Point(x + s, y + 21) };
+                g->DrawPolygon(p, pts);
+                g->FillEllipse(fill, x + 4, y + 19, 8, 8);
+                g->FillEllipse(fill, x + s - 12, y + 19, 8, 8);
+                break; }
+            case 3: {  // price tag
+                array<Point>^ pts = gcnew array<Point>{ Point(x + 2, y + 4), Point(x + 16, y + 4), Point(x + s - 1, y + 17),
+                    Point(x + 17, y + s - 1), Point(x + 2, y + 15) };
+                g->DrawPolygon(p, pts);
+                g->FillEllipse(fill, x + 7, y + 8, 5, 5);
+                break; }
+            case 4:  // two arrows
+                g->DrawLine(p, x + 2, y + 9, x + s - 4, y + 9);
+                g->DrawLine(p, x + s - 10, y + 3, x + s - 4, y + 9);
+                g->DrawLine(p, x + s - 10, y + 15, x + s - 4, y + 9);
+                g->DrawLine(p, x + s - 2, y + 22, x + 4, y + 22);
+                g->DrawLine(p, x + 10, y + 16, x + 4, y + 22);
+                g->DrawLine(p, x + 10, y + 28, x + 4, y + 22);
+                break;
+            default:  // payment card
+                Theme::DrawRound(g, p, (float)x, (float)y + 5, (float)s, 20, 6);
+                g->FillRectangle(fill, x, y + 10, s, 5);
+                g->DrawLine(p, x + 5, y + 21, x + 12, y + 21);
+                break;
+            }
+        }
+    };
+
+    // ---- workflow info tile
+    public ref class WorkflowCard : public Control {
+    public:
+        WorkflowCard() {
+            DoubleBuffered = true;
+            SetStyle(ControlStyles::SupportsTransparentBackColor, true);
+            BackColor = Color::Transparent;
+            Dock = DockStyle::Fill;
+            Margin = System::Windows::Forms::Padding(8);
+        }
+
+    protected:
+        virtual void OnPaint(PaintEventArgs^ e) override {
+            Graphics^ g = e->Graphics;
+            Theme::Smooth(g);
+            float w = (float)Width, h = (float)Height;
+            GraphicsPath^ path = Theme::Round(0, 3, w - 4, h - 10, 18);
+            LinearGradientBrush^ bg = gcnew LinearGradientBrush(RectangleF(0, 3, w, h), Theme::GreenDark(), Theme::Navy(), 35.0f);
+            g->FillPath(bg, path);
+            g->DrawString("TYPICAL WORKFLOW", Theme::Fnt(FontStyle::Bold, 9.0f), gcnew SolidBrush(Theme::Gold()), 22.0f, 22.0f);
+            array<String^>^ steps = gcnew array<String^>{ "Register vehicle", "Record entry", "Complete trip at exit", "Print ticket after payment" };
+            float y = 56;
+            StringFormat^ cf = gcnew StringFormat();
+            cf->Alignment = StringAlignment::Center;
+            cf->LineAlignment = StringAlignment::Center;
+            for (int i = 0; i < steps->Length; i++) {
+                g->FillEllipse(gcnew SolidBrush(Theme::Gold()), 22.0f, y, 24.0f, 24.0f);
+                g->DrawString((i + 1).ToString(), Theme::Fnt(FontStyle::Bold, 9.0f), gcnew SolidBrush(Theme::Navy()), RectangleF(22, y, 24, 24), cf);
+                g->DrawString(steps[i], Theme::Fnt(FontStyle::Regular, 10.5f), Brushes::White, 58.0f, y + 2);
+                y += 38;
+            }
+        }
+    };
+
+    // ---- main menu
+    public ref class MainMenuForm : public Form {
+        int userId;
+        String^ role;
+        Label^ clock;
+        RoundButton^ signOutBtn;
+        System::Windows::Forms::Timer^ clockTimer;
+
+    public:
+        bool SignedOut;
+
+        MainMenuForm(int uid, String^ username, String^ roleName) {
+            userId = uid;
+            role = roleName;
+            SignedOut = false;
+            Text = "Sri Lanka Expressway Toll System";
+            StartPosition = FormStartPosition::CenterScreen;
+            ClientSize = System::Drawing::Size(1040, 740);
+            MinimumSize = System::Drawing::Size(900, 660);
+            BackColor = Theme::Bg();
+            Font = Theme::Fnt(FontStyle::Regular, 9.5f);
+            DoubleBuffered = true;
+
+            // dashboard tiles: 3 x 2 grid
+            TableLayoutPanel^ grid = gcnew TableLayoutPanel();
+            grid->Dock = DockStyle::Fill;
+            grid->ColumnCount = 3;
+            grid->RowCount = 2;
+            grid->Padding = System::Windows::Forms::Padding(22, 18, 22, 8);
+            grid->BackColor = Theme::Bg();
+            for (int i = 0; i < 3; i++) grid->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Percent, 33.33f));
+            for (int i = 0; i < 2; i++) grid->RowStyles->Add(gcnew RowStyle(SizeType::Percent, 50.0f));
+
+            AddCard(grid, 1, "Toll Stations", "Manage interchanges and toll plazas.", Color::FromArgb(0x0F, 0x6B, 0x4F), 0, 0);
+            AddCard(grid, 2, "Vehicles", "Register cars, vans, buses and lorries.", Color::FromArgb(0x1D, 0x5F, 0xA8), 1, 0);
+            AddCard(grid, 3, "Toll Rates", "Set fares and travel distance by route.", Color::FromArgb(0xC9, 0x8A, 0x0B), 2, 0);
+            AddCard(grid, 4, "Toll Transactions", "Record entries, exits and calculate tolls.", Color::FromArgb(0x7B, 0x3F, 0xA0), 0, 1);
+            AddCard(grid, 5, "Payments", "Collect payments and print tickets.", Color::FromArgb(0xC0, 0x39, 0x2B), 1, 1);
+            grid->Controls->Add(gcnew WorkflowCard(), 2, 1);
+
+            // footer
+            Panel^ footer = gcnew Panel();
+            footer->Dock = DockStyle::Bottom;
+            footer->Height = 54;
+            footer->BackColor = Color::White;
+            Label^ who = gcnew Label();
+            who->Text = "Signed in as " + username + "  •  " + role;
+            who->ForeColor = Theme::Muted();
+            who->AutoSize = true;
+            who->Location = Point(28, 18);
+            footer->Controls->Add(who);
+            signOutBtn = gcnew RoundButton("Sign out", BtnKind::Secondary);
+            signOutBtn->Click += gcnew EventHandler(this, &MainMenuForm::OnSignOut);
+            footer->Controls->Add(signOutBtn);
+            clock = gcnew Label();
+            clock->ForeColor = Theme::Green();
+            clock->Font = Theme::Fnt(FontStyle::Bold, 9.0f);
+            clock->AutoSize = true;
+            footer->Controls->Add(clock);
+            footer->Resize += gcnew EventHandler(this, &MainMenuForm::OnFooterResize);
+            clockTimer = gcnew System::Windows::Forms::Timer();
+            clockTimer->Interval = 1000;
+            clockTimer->Tick += gcnew EventHandler(this, &MainMenuForm::OnTick);
+            clockTimer->Start();
+            OnTick(nullptr, nullptr);
+
+            HeroPanel^ hero = gcnew HeroPanel(
+                gcnew array<String^>{ "hero_southern.png", "hero_kandy.png", "hero_colombo.png", "hero_plaza.png", "hero_night.png" },
+                "Welcome, " + username,
+                "Sri Lanka Expressway Toll System  •  Manage stations, vehicles, rates, trips and payments",
+                role, 250);
+
+            Controls->Add(grid);
+            Controls->Add(footer);
+            Controls->Add(hero);
+            OnFooterResize(footer, nullptr);
+        }
+
+    protected:
+        virtual void Dispose(bool disposing) override {
+            if (disposing && clockTimer != nullptr) clockTimer->Stop();
+            Form::Dispose(disposing);
+        }
+
+    private:
+        void AddCard(TableLayoutPanel^ grid, int kind, String^ title, String^ desc, Color accent, int col, int row) {
+            MenuCard^ c = gcnew MenuCard(kind, title, desc, accent);
+            c->Click += gcnew EventHandler(this, &MainMenuForm::OnCardClick);
+            grid->Controls->Add(c, col, row);
+        }
+
+        void OnCardClick(Object^ sender, EventArgs^ e) {
+            MenuCard^ c = safe_cast<MenuCard^>(sender);
+            Form^ f = nullptr;
+            switch (c->Kind) {
+            case 1: f = gcnew StationsForm(role); break;
+            case 2: f = gcnew VehiclesForm(userId, role); break;
+            case 3: f = gcnew RatesForm(role); break;
+            case 4: f = gcnew TransactionsForm(userId, role); break;
+            case 5: f = gcnew PaymentsForm(role); break;
+            }
+            if (f != nullptr) f->Show(this);
+        }
+
+        void OnSignOut(Object^ s, EventArgs^ e) {
+            SignedOut = true;
+            Close();
+        }
+
+        void OnTick(Object^ s, EventArgs^ e) {
+            clock->Text = DateTime::Now.ToString("ddd, dd MMM yyyy  HH:mm:ss");
+        }
+
+        void OnFooterResize(Object^ s, EventArgs^ e) {
+            Panel^ footer = safe_cast<Panel^>(s);
+            signOutBtn->Location = Point(footer->Width - signOutBtn->Width - 28, 8);
+            clock->Location = Point(signOutBtn->Left - clock->Width - 16, 19);
+        }
+    };
+}

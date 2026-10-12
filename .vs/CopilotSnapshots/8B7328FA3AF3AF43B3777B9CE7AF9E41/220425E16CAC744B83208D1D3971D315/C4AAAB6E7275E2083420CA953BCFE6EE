@@ -1,0 +1,148 @@
+﻿#pragma once
+// Base class for the five management screens: hero banner + controls card + styled grid card.
+
+#include "Theme.h"
+
+using namespace System;
+using namespace System::Data;
+using namespace System::Drawing;
+using namespace System::Windows::Forms;
+
+namespace ExpresswayToll {
+
+    public ref class PageForm : public Form {
+    protected:
+        DataGridView^ grid;
+        FlowLayoutPanel^ flow;
+        CardPanel^ controlsCard;
+        CardPanel^ gridCard;
+        HeroPanel^ hero;
+
+        PageForm(String^ title, String^ subtitle, String^ image, int controlsHeight, int width, int height) {
+            Text = title + " - Sri Lanka Expressway Toll System";
+            StartPosition = FormStartPosition::CenterScreen;
+            ClientSize = System::Drawing::Size(width, height);
+            MinimumSize = System::Drawing::Size(820, 520);
+            BackColor = Theme::Bg();
+            Font = Theme::Fnt(FontStyle::Regular, 9.5f);
+            DoubleBuffered = true;
+
+            Panel^ body = gcnew Panel();
+            body->Dock = DockStyle::Fill;
+            body->Padding = System::Windows::Forms::Padding(18, 14, 18, 14);
+            body->BackColor = Theme::Bg();
+
+            // table card (fills the remaining space)
+            gridCard = gcnew CardPanel();
+            gridCard->Dock = DockStyle::Fill;
+            gridCard->Padding = System::Windows::Forms::Padding(8, 8, 10, 14);
+            grid = gcnew DataGridView();
+            grid->Dock = DockStyle::Fill;
+            Theme::StyleGrid(grid);
+            gridCard->Controls->Add(grid);
+
+            // controls card (top)
+            controlsCard = gcnew CardPanel();
+            controlsCard->Dock = DockStyle::Top;
+            controlsCard->Height = controlsHeight;
+            controlsCard->Padding = System::Windows::Forms::Padding(12, 8, 12, 14);
+            controlsCard->AutoSize = true;
+            controlsCard->AutoSizeMode = System::Windows::Forms::AutoSizeMode::GrowAndShrink;
+            flow = gcnew FlowLayoutPanel();
+            flow->Dock = DockStyle::Fill;
+            flow->WrapContents = true;
+            flow->AutoSize = true;
+            flow->AutoSizeMode = System::Windows::Forms::AutoSizeMode::GrowAndShrink;
+            flow->BackColor = Color::White;
+            controlsCard->Controls->Add(flow);
+
+            // add the Fill control first, then the Top ones (WinForms docks from the back of the z-order)
+            body->Controls->Add(gridCard);
+            Panel^ gap = gcnew Panel();
+            gap->Dock = DockStyle::Top;
+            gap->Height = 10;
+            gap->BackColor = Theme::Bg();
+            body->Controls->Add(gap);
+            body->Controls->Add(controlsCard);
+
+            hero = gcnew HeroPanel(gcnew array<String^>{ image }, title, subtitle, nullptr, 130);
+            Controls->Add(body);
+            Controls->Add(hero);
+        }
+
+        // ---- small helpers to fill the controls card
+        Label^ AddLabel(String^ text) {
+            Label^ l = gcnew Label();
+            l->Text = text;
+            l->AutoSize = true;
+            l->ForeColor = Theme::Muted();
+            l->Font = Theme::Fnt(FontStyle::Bold, 9.0f);
+            l->Margin = System::Windows::Forms::Padding(4, 11, 4, 0);
+            l->BackColor = Color::White;
+            flow->Controls->Add(l);
+            return l;
+        }
+
+        TextBox^ AddText(int width) {
+            TextBox^ t = gcnew TextBox();
+            t->Width = width;
+            t->Font = Theme::Fnt(FontStyle::Regular, 10.5f);
+            t->BorderStyle = BorderStyle::FixedSingle;
+            t->Margin = System::Windows::Forms::Padding(0, 6, 10, 0);
+            flow->Controls->Add(t);
+            return t;
+        }
+
+        ComboBox^ AddCombo(int width) {
+            ComboBox^ c = gcnew ComboBox();
+            c->Width = width;
+            c->DropDownStyle = ComboBoxStyle::DropDownList;
+            c->Font = Theme::Fnt(FontStyle::Regular, 10.5f);
+            c->FlatStyle = FlatStyle::Flat;
+            c->Margin = System::Windows::Forms::Padding(0, 6, 10, 0);
+            flow->Controls->Add(c);
+            return c;
+        }
+
+        RoundButton^ AddButton(String^ text, BtnKind kind, EventHandler^ handler) {
+            RoundButton^ b = gcnew RoundButton(text, kind);
+            b->Click += handler;
+            flow->Controls->Add(b);
+            return b;
+        }
+
+        void Break() {
+            if (flow->Controls->Count > 0) {
+                flow->SetFlowBreak(flow->Controls[flow->Controls->Count - 1], true);
+            }
+        }
+
+        bool Confirm(String^ text) {
+            return MessageBox::Show(text, "Confirm", MessageBoxButtons::YesNo, MessageBoxIcon::Question) == System::Windows::Forms::DialogResult::Yes;
+        }
+
+        void Info(String^ text) {
+            MessageBox::Show(text, Text, MessageBoxButtons::OK, MessageBoxIcon::Information);
+        }
+
+        // Selected row, or nullptr
+        DataGridViewRow^ SelectedRow() {
+            if (grid->CurrentRow == nullptr) return nullptr;
+            return grid->CurrentRow;
+        }
+
+        int SelectedId(String^ column) {
+            DataGridViewRow^ r = SelectedRow();
+            if (r == nullptr) return -1;
+            return Convert::ToInt32(r->Cells[column]->Value);
+        }
+
+        void FillCombo(ComboBox^ combo, DataTable^ dt, String^ idCol, String^ textCol) {
+            combo->Items->Clear();
+            for each (DataRow ^ r in dt->Rows) {
+                combo->Items->Add(gcnew Item(Convert::ToInt32(r[idCol]), Convert::ToString(r[textCol])));
+            }
+            if (combo->Items->Count > 0) combo->SelectedIndex = 0;
+        }
+    };
+}

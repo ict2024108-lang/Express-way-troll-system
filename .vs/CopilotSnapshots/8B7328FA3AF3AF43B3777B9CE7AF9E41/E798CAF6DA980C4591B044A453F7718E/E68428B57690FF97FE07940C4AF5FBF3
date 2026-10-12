@@ -1,0 +1,128 @@
+﻿#pragma once
+#include "PageForm.h"
+
+namespace ExpresswayToll {
+
+    public ref class TransactionsForm : public PageForm {
+        TextBox^ ticketBox;
+        ComboBox^ vehicleBox;
+        ComboBox^ entryBox;
+        ComboBox^ exitBox;
+        int userId;
+
+    public:
+        TransactionsForm(int uid, String^ role)
+            : PageForm("Toll Transactions", "Record trip entries and exits, tolls and distance are calculated automatically", "hero_plaza.png", 128, 1180, 660) {
+            userId = uid;
+
+            AddLabel("ENTRY (new trip)");
+            Break();
+            AddLabel("Ticket #:");
+            ticketBox = AddText(110);
+            AddLabel("Vehicle:");
+            vehicleBox = AddCombo(180);
+            AddLabel("Entry station:");
+            entryBox = AddCombo(150);
+            AddButton("Record entry", BtnKind::Primary, gcnew EventHandler(this, &TransactionsForm::OnEntry));
+            Break();
+
+            AddLabel("EXIT (complete trip)");
+            Break();
+            AddLabel("Exit station:");
+            exitBox = AddCombo(150);
+            AddButton("Complete selected trip", BtnKind::Primary, gcnew EventHandler(this, &TransactionsForm::OnComplete));
+            AddButton("Refresh", BtnKind::Secondary, gcnew EventHandler(this, &TransactionsForm::OnRefresh));
+
+            LoadLookups();
+            ReloadData();
+        }
+
+    private:
+        void LoadLookups() {
+            try {
+                DataTable^ v = Db::Query("SELECT vehicle_id, CONCAT(registration_number, ' (', vehicle_type, ')') AS label FROM vehicles ORDER BY vehicle_id");
+                FillCombo(vehicleBox, v, "vehicle_id", "label");
+                DataTable^ st = Db::Query("SELECT station_id, station_name FROM toll_stations ORDER BY station_id");
+                FillCombo(entryBox, st, "station_id", "station_name");
+                FillCombo(exitBox, st, "station_id", "station_name");
+            }
+            catch (Exception^ ex) { Db::ShowError(ex); }
+        }
+
+        void ReloadData() {
+            try {
+                Theme::BindGrid(grid, Db::Query(
+                    "SELECT t.transaction_id, t.ticket_number, v.registration_number, v.vehicle_type, "
+                    "es.station_name AS entry_station, xs.station_name AS exit_station, "
+                    "t.entry_time, t.exit_time, t.toll_amount, t.distance_km, t.status, t.entry_station_id "
+                    "FROM toll_transactions t "
+                    "JOIN vehicles v ON t.vehicle_id = v.vehicle_id "
+                    "JOIN toll_stations es ON t.entry_station_id = es.station_id "
+                    "LEFT JOIN toll_stations xs ON t.exit_station_id = xs.station_id "
+                    "ORDER BY t.transaction_id DESC"));
+                grid->Columns["entry_station_id"]->Visible = false;
+            }
+            catch (Exception^ ex) { Db::ShowError(ex); }
+        }
+
+        void OnRefresh(Object^ s, EventArgs^ e) { ReloadData(); }
+
+        void OnEntry(Object^ s, EventArgs^ e) {
+            String^ ticket = ticketBox->Text->Trim();
+            Item^ vehicle = dynamic_cast<Item^>(vehicleBox->SelectedItem);
+            Item^ entry = dynamic_cast<Item^>(entryBox->SelectedItem);
+            if (ticket->Length == 0 || vehicle == nullptr || entry == nullptr) {
+                Info("Fill ticket, vehicle, and entry station.");
+                return;
+            }
+            try {
+                Db::Exec("INSERT INTO toll_transactions (ticket_number, vehicle_id, entry_station_id, entry_time, status) "
+                    "VALUES (@t, @v, @s, @time, 'ACTIVE')",
+                    gcnew array<Object^>{ "@t", ticket, "@v", vehicle->Id, "@s", entry->Id, "@time", DateTime::Now });
+                ticketBox->Clear();
+                ReloadData();
+            }
+            catch (Exception^ ex) { Db::ShowError(ex); }
+        }
+
+        void OnComplete(Object^ s, EventArgs^ e) {
+            DataGridViewRow^ row = SelectedRow();
+            if (row == nullptr) { Info("Select an ACTIVE transaction."); return; }
+            String^ status = Convert::ToString(row->Cells["status"]->Value);
+            if (!String::Equals(status, "ACTIVE", StringComparison::OrdinalIgnoreCase)) {
+                Info("Only ACTIVE trips can be completed.");
+                return;
+            }
+            int transactionId = Convert::ToInt32(row->Cells["transaction_id"]->Value);
+            String^ vehicleType = Convert::ToString(row->Cells["vehicle_type"]->Value);
+            int entryStationId = Convert::ToInt32(row->Cells["entry_station_id"]->Value);
+            Item^ exitItem = dynamic_cast<Item^>(exitBox->SelectedItem);
+            if (exitItem == nullptr) { Info("Choose exit station."); return; }
+            if (entryStationId == exitItem->Id) { Info("Exit must differ from entry."); return; }
+
+            try {
+                DataTable^ rate = Db::Query(
+                    "SELECT amount, distance_km FROM toll_rates WHERE vehicle_type = @t AND entry_station_id = @e AND exit_station_id = @x",
+                    gcnew array<Object^>{ "@t", vehicleType, "@e", entryStationId, "@x", exitItem->Id });
+                if (rate->Rows->Count == 0) {
+                    Info("No toll rate for this route and vehicle type.");
+                    return;
+                }
+                Decimal toll = Convert::ToDecimal(rate->Rows[0]["amount"]);
+                Object^ distRaw = rate->Rows[0]["distance_km"];
+                bool hasDistance = !Db::IsNull(distRaw);
+
+                Db::Exec("UPDATE toll_transactions SET exit_station_id = @x, exit_time = @time, toll_amount = @a, "
+                    "distance_km = @d, status = 'COMPLETED' WHERE transaction_id = @id",
+                    gcnew array<Object^>{ "@x", exitItem->Id, "@time", DateTime::Now, "@a", toll,
+                    "@d", hasDistance ? distRaw : DBNull::Value, "@id", transactionId });
+                ReloadData();
+                String^ msg = "Trip completed. Toll: LKR " + toll.ToString("N2");
+                if (hasDistance) msg += "   Distance: " + Convert::ToDecimal(distRaw).ToString("0.0") + " km";
+                else msg += "   (distance not set for this route)";
+                Info(msg);
+            }
+            catch (Exception^ ex) { Db::ShowError(ex); }
+        }
+    };
+}

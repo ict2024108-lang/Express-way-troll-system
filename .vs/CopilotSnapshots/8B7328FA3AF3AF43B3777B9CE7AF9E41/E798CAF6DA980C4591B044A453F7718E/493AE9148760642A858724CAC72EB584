@@ -1,0 +1,400 @@
+﻿#pragma once
+// Shared look & feel: colours, fonts, photos, hero banner, cards, rounded buttons, styled grid.
+// Photos are loaded from the "images" folder next to the .exe (drop your own files with the same names).
+
+#include "Db.h"
+
+using namespace System;
+using namespace System::Collections::Generic;
+using namespace System::Data;
+using namespace System::Drawing;
+using namespace System::Drawing::Drawing2D;
+using namespace System::Drawing::Imaging;
+using namespace System::Drawing::Text;
+using namespace System::IO;
+using namespace System::Text;
+using namespace System::Windows::Forms;
+
+namespace ExpresswayToll {
+
+    public ref class Theme abstract sealed {
+    private:
+        static Dictionary<String^, System::Drawing::Image^>^ cache;
+        static List<MemoryStream^>^ streams;
+
+    public:
+        // ---- palette
+        static Color Green() { return Color::FromArgb(0x0F, 0x6B, 0x4F); }
+        static Color GreenDark() { return Color::FromArgb(0x0A, 0x4A, 0x37); }
+        static Color GreenLight() { return Color::FromArgb(0xDD, 0xF1, 0xE8); }
+        static Color Gold() { return Color::FromArgb(0xF2, 0xB6, 0x32); }
+        static Color Navy() { return Color::FromArgb(0x0E, 0x2A, 0x47); }
+        static Color Bg() { return Color::FromArgb(0xF2, 0xF5, 0xF4); }
+        static Color Ink() { return Color::FromArgb(0x1F, 0x2D, 0x2A); }
+        static Color Muted() { return Color::FromArgb(0x6B, 0x7C, 0x77); }
+        static Color Line() { return Color::FromArgb(0xDC, 0xE4, 0xE1); }
+        static Color Red() { return Color::FromArgb(0xC0, 0x39, 0x2B); }
+
+        // ---- fonts (points for controls, "world" units for drawing/printing the ticket)
+        static System::Drawing::Font^ Fnt(FontStyle style, float pt) {
+            return gcnew System::Drawing::Font("Segoe UI", pt, style, GraphicsUnit::Point);
+        }
+        static System::Drawing::Font^ FntW(FontStyle style, float size) {
+            return gcnew System::Drawing::Font("Segoe UI", size, style, GraphicsUnit::World);
+        }
+
+        // ---- images
+        static System::Drawing::Image^ Img(String^ name) {
+            if (cache == nullptr) {
+                cache = gcnew Dictionary<String^, System::Drawing::Image^>();
+                streams = gcnew List<MemoryStream^>();
+            }
+            System::Drawing::Image^ img;
+            if (cache->TryGetValue(name, img)) return img;
+            img = nullptr;
+            try {
+                String^ path = Path::Combine(Application::StartupPath, "images", name);
+                if (File::Exists(path)) {
+                    MemoryStream^ ms = gcnew MemoryStream(File::ReadAllBytes(path));
+                    streams->Add(ms);  // GDI+ needs the stream to stay alive
+                    img = System::Drawing::Image::FromStream(ms);
+                }
+            }
+            catch (Exception^) {
+                img = nullptr;
+            }
+            cache[name] = img;
+            return img;
+        }
+
+        // Draw an image scaled to cover w x h (like CSS background-size: cover).
+        static void PaintCover(Graphics^ g, System::Drawing::Image^ img, int w, int h, float alpha, double anchorY) {
+            if (img == nullptr) return;
+            double s = Math::Max((double)w / img->Width, (double)h / img->Height);
+            int dw = (int)Math::Ceiling(img->Width * s);
+            int dh = (int)Math::Ceiling(img->Height * s);
+            Rectangle dest((w - dw) / 2, (int)((h - dh) * anchorY), dw, dh);
+            g->InterpolationMode = InterpolationMode::HighQualityBicubic;
+            if (alpha >= 0.999f) {
+                g->DrawImage(img, dest);
+                return;
+            }
+            ColorMatrix^ cm = gcnew ColorMatrix();
+            cm->Matrix33 = alpha;
+            ImageAttributes^ ia = gcnew ImageAttributes();
+            ia->SetColorMatrix(cm);
+            g->DrawImage(img, dest, 0, 0, img->Width, img->Height, GraphicsUnit::Pixel, ia);
+        }
+
+        static void Smooth(Graphics^ g) {
+            g->SmoothingMode = SmoothingMode::AntiAlias;
+            g->TextRenderingHint = TextRenderingHint::ClearTypeGridFit;
+            g->InterpolationMode = InterpolationMode::HighQualityBicubic;
+            g->PixelOffsetMode = PixelOffsetMode::HighQuality;
+        }
+
+        static GraphicsPath^ Round(float x, float y, float w, float h, float r) {
+            GraphicsPath^ p = gcnew GraphicsPath();
+            float d = r * 2;
+            p->AddArc(x, y, d, d, 180, 90);
+            p->AddArc(x + w - d, y, d, d, 270, 90);
+            p->AddArc(x + w - d, y + h - d, d, d, 0, 90);
+            p->AddArc(x, y + h - d, d, d, 90, 90);
+            p->CloseFigure();
+            return p;
+        }
+
+        static void FillRound(Graphics^ g, Brush^ b, float x, float y, float w, float h, float r) {
+            GraphicsPath^ p = Round(x, y, w, h, r);
+            g->FillPath(b, p);
+        }
+
+        static void DrawRound(Graphics^ g, Pen^ pen, float x, float y, float w, float h, float r) {
+            GraphicsPath^ p = Round(x, y, w, h, r);
+            g->DrawPath(pen, p);
+        }
+
+        // "transaction_id" -> "Transaction ID", "distance_km" -> "Distance (km)"
+        static String^ Pretty(String^ column) {
+            array<String^>^ parts = column->Replace('_', ' ')->ToLower()->Split(gcnew array<wchar_t>{' '}, StringSplitOptions::RemoveEmptyEntries);
+            StringBuilder^ sb = gcnew StringBuilder();
+            for each (String ^ p in parts) {
+                if (sb->Length > 0) sb->Append(' ');
+                if (p == "id") sb->Append("ID");
+                else if (p == "km") sb->Append("(km)");
+                else sb->Append(p->Substring(0, 1)->ToUpper() + p->Substring(1));
+            }
+            return sb->ToString();
+        }
+
+        // ---- grid styling
+        static void StyleGrid(DataGridView^ g) {
+            g->BorderStyle = BorderStyle::None;
+            g->BackgroundColor = Color::White;
+            g->ReadOnly = true;
+            g->AllowUserToAddRows = false;
+            g->AllowUserToDeleteRows = false;
+            g->AllowUserToResizeRows = false;
+            g->RowHeadersVisible = false;
+            g->MultiSelect = false;
+            g->SelectionMode = DataGridViewSelectionMode::FullRowSelect;
+            g->AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode::Fill;
+            g->CellBorderStyle = DataGridViewCellBorderStyle::SingleHorizontal;
+            g->GridColor = Color::FromArgb(0xED, 0xF1, 0xEF);
+            g->EnableHeadersVisualStyles = false;
+            g->ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle::None;
+            g->ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode::DisableResizing;
+            g->ColumnHeadersHeight = 40;
+            g->ColumnHeadersDefaultCellStyle->BackColor = GreenDark();
+            g->ColumnHeadersDefaultCellStyle->ForeColor = Color::White;
+            g->ColumnHeadersDefaultCellStyle->SelectionBackColor = GreenDark();
+            g->ColumnHeadersDefaultCellStyle->Font = Fnt(FontStyle::Bold, 9.0f);
+            g->ColumnHeadersDefaultCellStyle->Padding = Padding(8, 0, 8, 0);
+            g->DefaultCellStyle->Font = Fnt(FontStyle::Regular, 10.0f);
+            g->DefaultCellStyle->ForeColor = Ink();
+            g->DefaultCellStyle->BackColor = Color::White;
+            g->DefaultCellStyle->SelectionBackColor = GreenLight();
+            g->DefaultCellStyle->SelectionForeColor = Ink();
+            g->DefaultCellStyle->Padding = Padding(8, 0, 8, 0);
+            g->AlternatingRowsDefaultCellStyle->BackColor = Color::FromArgb(0xF8, 0xFA, 0xF9);
+            g->RowTemplate->Height = 36;
+            g->CellFormatting += gcnew DataGridViewCellFormattingEventHandler(&Theme::GridCellFormatting);
+        }
+
+        // Binds a table and applies friendly headers / number formats.
+        static void BindGrid(DataGridView^ g, DataTable^ dt) {
+            g->DataSource = dt;
+            for each (DataGridViewColumn ^ c in g->Columns) {
+                String^ name = c->Name;
+                c->HeaderText = Pretty(name);
+                c->SortMode = DataGridViewColumnSortMode::Automatic;
+                if (name->EndsWith("_id")) {
+                    c->FillWeight = 55;
+                }
+                else {
+                    c->FillWeight = 100;
+                }
+                if (c->ValueType == Decimal::typeid) {
+                    if (name->EndsWith("_km")) c->DefaultCellStyle->Format = "N1";
+                    else c->DefaultCellStyle->Format = "N2";
+                    c->DefaultCellStyle->Alignment = DataGridViewContentAlignment::MiddleRight;
+                }
+                else if (c->ValueType == DateTime::typeid) {
+                    c->DefaultCellStyle->Format = "yyyy-MM-dd HH:mm:ss";
+                    c->FillWeight = 130;
+                }
+            }
+        }
+
+        static void GridCellFormatting(Object^ sender, DataGridViewCellFormattingEventArgs^ e) {
+            DataGridView^ g = safe_cast<DataGridView^>(sender);
+            if (e->ColumnIndex < 0 || e->RowIndex < 0) return;
+            String^ col = g->Columns[e->ColumnIndex]->Name;
+            if (col != "status" && col != "payment_method") return;
+            String^ v = String::Empty;
+            if (e->Value != nullptr) v = e->Value->ToString()->ToUpper();
+            if (v == "ACTIVE") {
+                e->CellStyle->ForeColor = Color::FromArgb(0xB3, 0x6B, 0x00);
+                e->CellStyle->Font = Fnt(FontStyle::Bold, 9.0f);
+            }
+            else if (v == "COMPLETED" || v == "CARD") {
+                e->CellStyle->ForeColor = Green();
+                e->CellStyle->Font = Fnt(FontStyle::Bold, 9.0f);
+            }
+            else if (v == "CASH") {
+                e->CellStyle->ForeColor = Navy();
+                e->CellStyle->Font = Fnt(FontStyle::Bold, 9.0f);
+            }
+        }
+    };
+
+    // ==================================================================== Hero banner
+    public ref class HeroPanel : public Panel {
+        array<String^>^ images;
+        String^ title;
+        String^ subtitle;
+        String^ chip;
+        int current;
+        float fade;
+        System::Windows::Forms::Timer^ fadeTimer;
+        System::Windows::Forms::Timer^ cycleTimer;
+
+    public:
+        HeroPanel(array<String^>^ imgs, String^ t, String^ sub, String^ chipText, int height) {
+            images = imgs;
+            title = t;
+            subtitle = sub;
+            chip = chipText;
+            current = 0;
+            fade = 1.0f;
+            DoubleBuffered = true;
+            SetStyle(ControlStyles::ResizeRedraw, true);
+            Dock = DockStyle::Top;
+            Height = height;
+            BackColor = Theme::GreenDark();
+            if (images->Length > 1) {
+                fadeTimer = gcnew System::Windows::Forms::Timer();
+                fadeTimer->Interval = 40;
+                fadeTimer->Tick += gcnew EventHandler(this, &HeroPanel::OnFade);
+                cycleTimer = gcnew System::Windows::Forms::Timer();
+                cycleTimer->Interval = 5500;
+                cycleTimer->Tick += gcnew EventHandler(this, &HeroPanel::OnCycle);
+                fadeTimer->Start();
+                cycleTimer->Start();
+            }
+        }
+
+    protected:
+        virtual void Dispose(bool disposing) override {
+            if (disposing) {
+                if (fadeTimer != nullptr) fadeTimer->Stop();
+                if (cycleTimer != nullptr) cycleTimer->Stop();
+            }
+            Panel::Dispose(disposing);
+        }
+
+        virtual void OnPaint(PaintEventArgs^ e) override {
+            Graphics^ g = e->Graphics;
+            Theme::Smooth(g);
+            int w = Width, h = Height;
+            LinearGradientBrush^ bg = gcnew LinearGradientBrush(Rectangle(0, 0, w, h), Theme::GreenDark(), Theme::Navy(), 20.0f);
+            g->FillRectangle(bg, 0, 0, w, h);
+
+            int prev = (current - 1 + images->Length) % images->Length;
+            if (fade < 1.0f && images->Length > 1) {
+                Theme::PaintCover(g, Theme::Img(images[prev]), w, h, 1.0f, 0.7);
+            }
+            Theme::PaintCover(g, Theme::Img(images[current]), w, h, images->Length > 1 ? fade : 1.0f, 0.7);
+
+            // dark gradient on the left so the text is readable on bright skies
+            LinearGradientBrush^ left = gcnew LinearGradientBrush(Rectangle(0, 0, w, h), Color::Black, Color::Black, LinearGradientMode::Horizontal);
+            ColorBlend^ cb = gcnew ColorBlend(3);
+            cb->Colors = gcnew array<Color>{ Color::FromArgb(215, 6, 40, 30), Color::FromArgb(0, 6, 40, 30), Color::FromArgb(0, 6, 40, 30) };
+            cb->Positions = gcnew array<float>{ 0.0f, 0.62f, 1.0f };
+            left->InterpolationColors = cb;
+            g->FillRectangle(left, 0, 0, w, h);
+            // darken the bottom edge a little
+            LinearGradientBrush^ bottom = gcnew LinearGradientBrush(Rectangle(0, 0, w, h), Color::Black, Color::Black, LinearGradientMode::Vertical);
+            ColorBlend^ cb2 = gcnew ColorBlend(3);
+            cb2->Colors = gcnew array<Color>{ Color::FromArgb(0, 0, 0, 0), Color::FromArgb(0, 0, 0, 0), Color::FromArgb(120, 0, 0, 0) };
+            cb2->Positions = gcnew array<float>{ 0.0f, 0.55f, 1.0f };
+            bottom->InterpolationColors = cb2;
+            g->FillRectangle(bottom, 0, 0, w, h);
+            g->FillRectangle(gcnew SolidBrush(Theme::Gold()), 0, h - 4, w, 4);
+
+            bool big = h > 200;
+            float titleSize = big ? 26.0f : 20.0f;
+            float subSize = big ? 11.5f : 10.0f;
+            int x = 32;
+            int blockTop = big ? h / 2 - 58 : h / 2 - 40;
+            if (chip != nullptr) {
+                System::Drawing::Font^ cf = Theme::Fnt(FontStyle::Bold, 8.0f);
+                String^ c = chip->ToUpper();
+                SizeF sz = g->MeasureString(c, cf);
+                Theme::FillRound(g, gcnew SolidBrush(Theme::Gold()), (float)x, (float)blockTop, sz.Width + 14, 22, 11);
+                g->DrawString(c, cf, gcnew SolidBrush(Theme::Navy()), (float)x + 7, (float)blockTop + 3);
+                blockTop += 32;
+            }
+            g->DrawString(title, Theme::Fnt(FontStyle::Bold, titleSize), Brushes::White, (float)x, (float)blockTop);
+            if (subtitle != nullptr) {
+                g->DrawString(subtitle, Theme::Fnt(FontStyle::Regular, subSize),
+                    gcnew SolidBrush(Color::FromArgb(230, 255, 255, 255)), (float)x, (float)blockTop + (big ? 46 : 36));
+            }
+        }
+
+    private:
+        void OnFade(Object^ s, EventArgs^ e) {
+            if (fade < 1.0f) {
+                fade += 0.025f;
+                if (fade > 1.0f) fade = 1.0f;
+                Invalidate();
+            }
+        }
+        void OnCycle(Object^ s, EventArgs^ e) {
+            current = (current + 1) % images->Length;
+            fade = 0.0f;
+        }
+    };
+
+    // ==================================================================== Card
+    public ref class CardPanel : public Panel {
+    public:
+        CardPanel() {
+            DoubleBuffered = true;
+            SetStyle(ControlStyles::SupportsTransparentBackColor, true);
+            BackColor = Color::Transparent;
+            Padding = System::Windows::Forms::Padding(10, 8, 10, 14);
+        }
+
+    protected:
+        virtual void OnPaint(PaintEventArgs^ e) override {
+            Graphics^ g = e->Graphics;
+            Theme::Smooth(g);
+            int w = Width, h = Height;
+            Theme::FillRound(g, gcnew SolidBrush(Color::FromArgb(16, 0, 0, 0)), 2, 4, (float)w - 5, (float)h - 6, 16);
+            Theme::FillRound(g, Brushes::White, 0, 0, (float)w - 4, (float)h - 6, 16);
+            Theme::DrawRound(g, gcnew Pen(Theme::Line()), 0, 0, (float)w - 5, (float)h - 7, 16);
+            Panel::OnPaint(e);
+        }
+    };
+
+    // ==================================================================== Rounded buttons
+    public enum class BtnKind { Primary, Accent, Secondary, Danger };
+
+    public ref class RoundButton : public Button {
+        BtnKind kind;
+        bool hover;
+        bool pressed;
+
+    public:
+        RoundButton(String^ text, BtnKind k) {
+            kind = k;
+            Text = text;
+            FlatStyle = System::Windows::Forms::FlatStyle::Flat;
+            FlatAppearance->BorderSize = 0;
+            Cursor = Cursors::Hand;
+            Font = Theme::Fnt(FontStyle::Bold, 9.5f);
+            DoubleBuffered = true;
+            Height = 38;
+            Width = TextRenderer::MeasureText(text, Font).Width + 40;
+            Margin = System::Windows::Forms::Padding(0, 2, 10, 2);
+        }
+
+    protected:
+        virtual void OnMouseEnter(EventArgs^ e) override { hover = true; Invalidate(); Button::OnMouseEnter(e); }
+        virtual void OnMouseLeave(EventArgs^ e) override { hover = false; pressed = false; Invalidate(); Button::OnMouseLeave(e); }
+        virtual void OnMouseDown(MouseEventArgs^ e) override { pressed = true; Invalidate(); Button::OnMouseDown(e); }
+        virtual void OnMouseUp(MouseEventArgs^ e) override { pressed = false; Invalidate(); Button::OnMouseUp(e); }
+
+        virtual void OnPaint(PaintEventArgs^ e) override {
+            Graphics^ g = e->Graphics;
+            Theme::Smooth(g);
+            Color back = (Parent != nullptr) ? Parent->BackColor : Color::White;
+            g->Clear(back);
+
+            Color baseColor = (kind == BtnKind::Primary) ? Theme::Green()
+                : (kind == BtnKind::Accent) ? Theme::Gold()
+                : (kind == BtnKind::Danger) ? Theme::Red() : Theme::Green();
+            Color textColor = (kind == BtnKind::Accent) ? Theme::Navy()
+                : (kind == BtnKind::Secondary) ? Theme::Green() : Color::White;
+            float w = (float)Width - 1, h = (float)Height - 1;
+
+            if (!Enabled) {
+                Theme::FillRound(g, gcnew SolidBrush(Color::FromArgb(0xE3, 0xE8, 0xE6)), 0, 0, w, h, 12);
+                textColor = Color::FromArgb(0x9A, 0xA6, 0xA2);
+            }
+            else if (kind == BtnKind::Secondary) {
+                Theme::FillRound(g, gcnew SolidBrush(hover ? Theme::GreenLight() : Color::White), 0, 0, w, h, 12);
+                Theme::DrawRound(g, gcnew Pen(Theme::Green(), 1.4f), 0, 0, w, h, 12);
+            }
+            else {
+                Color fill = pressed ? ControlPaint::Dark(baseColor) : (hover ? ControlPaint::Light(baseColor, 0.25f) : baseColor);
+                Theme::FillRound(g, gcnew SolidBrush(fill), 0, 0, w, h, 12);
+            }
+            StringFormat^ sf = gcnew StringFormat();
+            sf->Alignment = StringAlignment::Center;
+            sf->LineAlignment = StringAlignment::Center;
+            g->DrawString(Text, Font, gcnew SolidBrush(textColor), RectangleF(0, 0, (float)Width, (float)Height), sf);
+        }
+    };
+}
