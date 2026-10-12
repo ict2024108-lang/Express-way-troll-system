@@ -1,34 +1,34 @@
-# Expressway Toll System CLI
+# 🚗 Expressway Toll System CLI 🛣️
 
-A lightweight and efficient **C# console application** designed to simulate and manage an expressway toll collection system. The system handles vehicle entry and exit tracking, toll fare calculations, receipt generation, transaction records, and toll-rate management.
+A lightweight and efficient **C# console application** designed to simulate and manage an expressway toll collection system. The system handles **vehicle entry and exit tracking, toll fare calculations, receipt generation, transaction records, and toll-rate management**.
 
 ---
 
 ## 📌 Features
 
-* **Vehicle Entry & Exit Tracking**
+* 🚘 **Vehicle Entry & Exit Tracking**
   Register vehicles entering and exiting toll gates at different plaza locations.
 
-* **Dynamic Toll Calculation**
+* 💰 **Dynamic Toll Calculation**
   Automatically calculate toll fees based on:
 
-  * Vehicle classification
-  * Distance traveled
-  * Applicable toll rate
+  * 🚗 Vehicle classification
+  * 📏 Distance traveled
+  * 💵 Applicable toll rate
 
-* **Receipt Generation**
+* 🧾 **Receipt Generation**
   Generate itemized transaction receipts for motorists when they exit the expressway.
 
-* **Transaction Logging**
+* 📝 **Transaction Logging**
   Store and view historical vehicle entry/exit transactions and revenue information.
 
-* **Revenue Reports**
+* 📊 **Revenue Reports**
   View transaction history and daily revenue information.
 
-* **Toll Rate Management**
+* ⚙️ **Toll Rate Management**
   Configure toll rates according to vehicle classes and distance traveled.
 
-* **Gate Management**
+* 🏁 **Gate Management**
   Manage toll gates/plazas and their respective distances.
 
 ---
@@ -40,58 +40,43 @@ ExpresswayTollSystemCLI/
 │
 ├── ExpresswayTollSystemCLI/
 │   │
-│   ├── Models/
-│   │   ├── Vehicle.cs
-│   │   │   └── Vehicle properties and class definitions
-│   │   │
-│   │   ├── TollGate.cs
-│   │   │   └── Toll gate/plaza details and distances
-│   │   │
-│   │   └── Transaction.cs
-│   │       └── Transaction and receipt data models
+│   ├── 📂 Models/
+│   │   ├── 🚗 Vehicle.cs
+│   │   ├── 🏁 TollGate.cs
+│   │   └── 🧾 Transaction.cs
 │   │
-│   ├── Services/
-│   │   ├── TollCalculator.cs
-│   │   │   └── Distance and fare calculation logic
-│   │   │
-│   │   ├── EntryExitManager.cs
-│   │   │   └── Vehicle entry and exit management
-│   │   │
-│   │   └── StorageService.cs
-│   │       └── Transaction and history persistence
+│   ├── 📂 Services/
+│   │   ├── 💰 TollCalculator.cs
+│   │   ├── 🚦 EntryExitManager.cs
+│   │   └── 💾 StorageService.cs
 │   │
-│   ├── Program.cs
-│   │   └── Main entry point and CLI menu interface
-│   │
-│   └── ExpresswayTollSystemCLI.csproj
+│   ├── ▶️ Program.cs
+│   └── 📄 ExpresswayTollSystemCLI.csproj
 │
-└── ExpresswayTollSystemCLI.sln
-    └── Visual Studio Solution File
+└── 📦 ExpresswayTollSystemCLI.sln
 ```
 
 ---
 
 ## 🚀 Installation & Setup
 
-### 1. Clone the Repository
+### 1️⃣ 📥 Clone the Repository
 
 ```bash
 git clone https://github.com/your-username/ExpresswayTollSystemCLI.git
 ```
 
-Navigate to the project directory:
-
 ```bash
 cd ExpresswayTollSystemCLI
 ```
 
-### 2. Restore Dependencies and Build
+### 2️⃣ 🔄 Restore Dependencies & Build
 
 ```bash
 dotnet build
 ```
 
-### 3. Run the Application
+### 3️⃣ ▶️ Run the Application
 
 ```bash
 dotnet run --project ExpresswayTollSystemCLI
@@ -101,18 +86,57 @@ dotnet run --project ExpresswayTollSystemCLI
 
 ## 💻 Usage
 
-When you start the application, you will be presented with the following command-line menu:
+When you start the application, you will be presented with the **Command-Line Interface (CLI)** login screen.
+
+---
+
+## 🔐 Login Credentials
+
+Use the following credentials to access the system:
+
+| 👤 Username | 🔑 Password   | 🛡️ Role        |
+| ----------- | ------------- | --------------- |
+| `admin`     | `admin123`    | 👑 **Admin**    |
+| `operator1` | `operator123` | 👷 **Operator** |
+
+### 👑 Admin
+
+The **Admin** role provides access to administrative functions such as:
+
+* ⚙️ Configure toll rates
+* 🏁 Manage toll gates
+* 📊 View system reports
+* 📝 View transaction history
+* 🚗 Manage system settings
+
+### 👷 Operator
+
+The **Operator** role is intended for day-to-day toll operations, such as:
+
+* 🚘 Register vehicle entry
+* 🏁 Process vehicle exit
+* 💰 Calculate toll charges
+* 🧾 Generate receipts
+* 🚦 View active vehicles
+
+> ⚠️ **Note:** These credentials are provided for demonstration/testing purposes. For production use, passwords should be stored securely and never committed directly to source code.
+
+---
+
+## 🖥️ Main Menu
+
+After successfully logging in, the system displays the following menu:
 
 ```text
 ==================================================
-           EXPRESSWAY TOLL SYSTEM CLI
+        🚗 EXPRESSWAY TOLL SYSTEM CLI 🛣️
 ==================================================
-1. Register Vehicle Entry
-2. Process Vehicle Exit & Charge Toll
-3. View Active Vehicles in System
-4. View Transaction History & Revenue Reports
-5. Configure Toll Rates
-6. Exit
+1. 🚘 Register Vehicle Entry
+2. 💰 Process Vehicle Exit & Charge Toll
+3. 🚦 View Active Vehicles in System
+4. 📊 View Transaction History & Revenue Reports
+5. ⚙️ Configure Toll Rates
+6. 🚪 Exit
 --------------------------------------------------
 Select an option (1-6):
 ```
@@ -121,60 +145,52 @@ Select an option (1-6):
 
 ## 🔄 Example Workflow
 
-### Step 1 – Register Vehicle Entry
+### 1️⃣ 🚘 Register Vehicle Entry
 
 Select **Option 1** to register a vehicle entering the expressway.
 
-For example:
-
 ```text
-Vehicle Number: WP ABC-1234
-Vehicle Class: Class 1
-Entry Gate: Gate A
-Entry Distance: 0 km
+🚗 Vehicle Number : WP ABC-1234
+🏷️ Vehicle Class  : Class 1
+🏁 Entry Gate     : Gate A
+📏 Entry Distance : 0 km
 ```
 
-### Step 2 – Process Vehicle Exit
+### 2️⃣ 🏁 Process Vehicle Exit
 
 When the vehicle exits the expressway, select **Option 2**.
 
-For example:
-
 ```text
-Exit Gate: Gate D
-Exit Distance: 45 km
+🏁 Exit Gate      : Gate D
+📏 Exit Distance  : 45 km
 ```
 
-### Step 3 – Calculate Toll
-
-The system calculates the distance traveled:
+### 3️⃣ 📏 Calculate Toll
 
 ```text
 Distance Traveled = Exit Distance - Entry Distance
 
 Distance Traveled = 45 km - 0 km
 
-Distance Traveled = 45 km
+📏 Distance Traveled = 45 km
 ```
 
-The applicable toll rate is then calculated according to the vehicle class.
-
-### Step 4 – Generate Receipt
-
-The system records the transaction and displays a receipt containing details such as:
+### 4️⃣ 🧾 Generate Receipt
 
 ```text
 ==================================================
-              EXPRESSWAY TOLL RECEIPT
+          🧾 EXPRESSWAY TOLL RECEIPT
 ==================================================
-Vehicle Number : WP ABC-1234
-Vehicle Class  : Class 1
-Entry Gate     : Gate A
-Exit Gate      : Gate D
-Distance       : 45 km
-Date & Time    : 2026-10-12 20:30
-Payment Method : Cash
-Toll Amount    : Rs. XXXX.XX
+🚗 Vehicle Number : WP ABC-1234
+🏷️ Vehicle Class  : Class 1
+🏁 Entry Gate     : Gate A
+🏁 Exit Gate      : Gate D
+📏 Distance       : 45 km
+📅 Date & Time    : 2026-10-12 20:30
+💳 Payment Method : Cash
+💰 Toll Amount    : Rs. XXXX.XX
+==================================================
+              ✅ THANK YOU!
 ==================================================
 ```
 
@@ -184,90 +200,81 @@ Toll Amount    : Rs. XXXX.XX
 
 Toll rates and vehicle-class multipliers can be configured through the application's toll calculation logic.
 
-The main calculation logic is located in:
+📂 Main calculation logic:
 
 ```text
 Services/TollCalculator.cs
 ```
 
-An optional `appsettings.json` configuration file can also be used if implemented.
+### 🚘 Vehicle Classes
 
-### Vehicle Classes
+| 🏷️ Vehicle Class | 🚗 Description                     | 💰 Toll Rate Multiplier |
+| ----------------- | ---------------------------------- | ----------------------: |
+| **Class 1**       | 🏍️ Motorcycles & Passenger Cars   |      **1.0× Base Rate** |
+| **Class 2**       | 🚙 SUVs, Vans & Light Trucks       |      **1.5× Base Rate** |
+| **Class 3**       | 🚛 Heavy Buses & Multi-Axle Trucks |      **2.5× Base Rate** |
 
-| Vehicle Class | Description                     | Toll Rate Multiplier |
-| ------------- | ------------------------------- | -------------------: |
-| **Class 1**   | Motorcycles & Passenger Cars    |       1.0× Base Rate |
-| **Class 2**   | SUVs, Vans & Light Trucks       |       1.5× Base Rate |
-| **Class 3**   | Heavy Buses & Multi-Axle Trucks |       2.5× Base Rate |
-
-### Toll Calculation
-
-The general calculation is:
+### 🧮 Toll Calculation
 
 ```text
-Toll Amount = Distance Traveled × Base Rate × Vehicle Class Multiplier
+💰 Toll Amount = Distance Traveled × Base Rate × Vehicle Class Multiplier
 ```
 
-For example:
+Example:
 
 ```text
-Distance = 45 km
-Base Rate = Rs. 10/km
-Vehicle Class = Class 2
-Multiplier = 1.5
+📏 Distance       = 45 km
+💵 Base Rate      = Rs. 10/km
+🚙 Vehicle Class  = Class 2
+✖️ Multiplier     = 1.5
 
-Toll Amount = 45 × 10 × 1.5
-            = Rs. 675
+💰 Toll Amount = 45 × 10 × 1.5
+
+✅ Toll Amount = Rs. 675
 ```
 
 ---
 
 ## 🧩 Main Components
 
-### Models
+### 📦 Models
 
-The `Models` folder contains the application's main data structures.
+* 🚗 **Vehicle.cs** – Stores vehicle information and vehicle classification.
+* 🏁 **TollGate.cs** – Stores toll gate/plaza information and distances.
+* 🧾 **Transaction.cs** – Stores transaction and receipt information.
 
-* **Vehicle.cs** – Stores vehicle information and vehicle classification.
-* **TollGate.cs** – Stores toll gate/plaza information and distances.
-* **Transaction.cs** – Stores transaction and receipt information.
+### ⚙️ Services
 
-### Services
+* 💰 **TollCalculator.cs** – Calculates travel distance and toll charges.
+* 🚦 **EntryExitManager.cs** – Manages vehicle entry and exit operations.
+* 💾 **StorageService.cs** – Handles transaction and historical data storage.
 
-The `Services` folder contains the application's core business logic.
+### ▶️ Program.cs
 
-* **TollCalculator.cs** – Calculates travel distance and toll charges.
-* **EntryExitManager.cs** – Manages vehicle entry and exit operations.
-* **StorageService.cs** – Handles transaction and historical data storage.
-
-### Program.cs
-
-`Program.cs` is the main entry point of the application. It provides the command-line interface and handles the main system menu.
+`Program.cs` is the main entry point of the application. It provides the **command-line interface** and handles the main system menu.
 
 ---
 
 ## 🔧 Built With
 
-| Technology              | Description                         |
-| ----------------------- | ----------------------------------- |
-| **C#**                  | Programming Language                |
-| **.NET**                | Application Framework               |
-| **Console Application** | User Interface                      |
-| **Visual Studio**       | Development Environment             |
-| **Visual Studio Code**  | Alternative Development Environment |
+| 💻 Technology              | 📝 Description                      |
+| -------------------------- | ----------------------------------- |
+| 🔷 **C#**                  | Programming Language                |
+| 🟣 **.NET**                | Application Framework               |
+| ⌨️ **Console Application** | User Interface                      |
+| 🟦 **Visual Studio**       | Development Environment             |
+| 🖥️ **Visual Studio Code** | Alternative Development Environment |
 
 ---
 
 ## 📋 System Requirements
 
-Before running the application, make sure you have:
+* 🟣 **.NET SDK** installed
+* 🟦 **Visual Studio** or **Visual Studio Code**
+* 🪟 Windows, 🐧 Linux, or 🍎 macOS
+* 🌐 **Git** for cloning the repository
 
-* .NET SDK installed
-* Visual Studio or Visual Studio Code
-* Windows, Linux, or macOS
-* Git (if cloning from GitHub)
-
-You can verify your .NET installation using:
+Check your .NET installation:
 
 ```bash
 dotnet --version
@@ -275,19 +282,17 @@ dotnet --version
 
 ---
 
-## 📁 Future Improvements
+## 🔮 Future Improvements
 
-Possible future enhancements include:
-
-* MySQL database integration
-* Graphical User Interface (GUI)
-* Online payment integration
-* Automated daily/monthly reports
-* Admin and user login system
-* Multiple toll plaza support
-* Advanced vehicle management
-* PDF receipt generation
-* Real-time revenue dashboard
+* 🗄️ MySQL database integration
+* 🖥️ Graphical User Interface (GUI)
+* 💳 Online payment integration
+* 📊 Automated daily/monthly reports
+* 🔐 Advanced authentication and authorization
+* 🏁 Multiple toll plaza support
+* 🚗 Advanced vehicle management
+* 📄 PDF receipt generation
+* 📈 Real-time revenue dashboard
 
 ---
 
@@ -299,16 +304,14 @@ See the `LICENSE` file for more information.
 
 ---
 
-# Login
-
-| Username   | Password     | Role     |
-|------------|--------------|----------|
-| admin      | admin123     | Admin    |
-| operator1  | operator123  | Operator |
-
-
 ## 👨‍💻 Project
 
-**Expressway Toll System CLI**
+### 🚗 Expressway Toll System CLI 🛣️
 
-A C#-based expressway toll management system developed for educational and demonstration purposes.
+A **C#-based expressway toll management system** developed for educational and demonstration purposes.
+
+---
+
+### ⭐ If you like this project, don't forget to give it a Star! ⭐
+
+**Made with ❤️ using C# and .NET**
